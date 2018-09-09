@@ -20,8 +20,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###
 
-readline = require 'readline'
 _ = require 'lodash'
+readline = require 'readline'
 storage = require 'node-persist'
 moment = require 'moment'
 colors = require 'colors'
@@ -29,72 +29,24 @@ fs = require 'fs'
 spawn = require('child_process').spawnSync
 { Magister, MagisterSchool } = require 'magister.js'
 
-mahGisterDir = "#{process.env.HOME or process.env.HOMEPATH or process.env.USERPROFILE}/.MahGister"
-storageDir = "#{mahGisterDir}/storage"
-attachmentsDir = "#{mahGisterDir}/attachments"
+rl = readline.createInterface
+	input: process.stdin
+	output: process.stdout
+	prompt: "=> ".bold.yellow
+	completer: (s) ->
+		filtered = _(commands)
+			.keys()
+			.filter (k) -> k.indexOf(s.toLowerCase().split(' ')[0]) is 0
+			.map (c) -> c + ' '
+			.value()
 
-days = [
-	'sunday'
-	'monday'
-	'tuesday'
-	'wednesday'
-	'thursday'
-	'friday'
-	'saturday'
-]
-
-shortDays = [
-	'zo'
-	'ma'
-	'di'
-	'wo'
-	'do'
-	'vr'
-	'za'
-]
-
-all = days.concat shortDays
-
-clearConsole = -> `console.log('\033[2J\033[1;0H')`
-getDate = (date) -> new Date date.getUTCFullYear(), date.getMonth(), date.getDate()
-
-showHelp = (exit = false) ->
-	repeat = (org, length = process.stdout.columns) ->
-		res = ''
-		res += org for i in [0...length//org.length]
-		return res
-
-	cent = (s, xAxis = process.stdout.columns) -> repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
-
-	console.log repeat '-'
-	console.log cent('MahGister').bold.red
-	console.log cent '(c) 2015 Lieuwe Rooijakkers'
-	console.log cent 'Licensed under the GPLv3 license.'
-	console.log repeat '-'
-
-	for key in _(commands).keys().sort().value()
-		command = commands[key]
-		console.log key.bold + ": #{command.description}"
-		for param in (command.params ? [])
-			console.log ''
-			console.log '    ' + param.name.underline + " [#{param.type}]: #{param.description}" +
-				if not param.optional? or param.optional is no then ""
-				else if param.optional is yes then " (optional)".red
-				else " (default: #{param.optional})".red
-			if param.example? then console.log '    Example'.bold + ": #{param.example}"
-
-		console.log repeat '-'
-
-	if exit
-		process.exit 0
-	else
-		rl.prompt()
+		[ filtered, s ]
 
 commands =
 	'help':
-		description: 'What do you expect?'
+		description: 'Shows this page.'
 	'who':
-		description: 'Returns the name of the current logged in user.'
+		description: 'Displays the name of the current logged in user.'
 	'clear':
 		description: 'Clears the screen.'
 	'appointments':
@@ -187,19 +139,72 @@ commands =
 			}
 		]
 	'exit':
-		description: 'Exists MahGister.'
+		description: 'Exits MagisterCLI.'
 
-rl = readline.createInterface
-	input: process.stdin
-	output: process.stdout
-	completer: (s) ->
-		filtered = _(commands)
-			.keys()
-			.filter (k) -> k.indexOf(s.toLowerCase().split(' ')[0]) is 0
-			.map (c) -> c + ' '
-			.value()
+magisterDir = "#{process.env.HOME or process.env.HOMEPATH or process.env.USERPROFILE}/.MahGister"
+storageDir = "#{magisterDir}/storage"
+attachmentsDir = "#{magisterDir}/attachments"
 
-		[ filtered, s ]
+days = [
+	'sunday'
+	'monday'
+	'tuesday'
+	'wednesday'
+	'thursday'
+	'friday'
+	'saturday'
+]
+
+shortDays = [
+	'zo'
+	'ma'
+	'di'
+	'wo'
+	'do'
+	'vr'
+	'za'
+]
+
+all = days.concat shortDays
+
+clearConsole = -> `console.log('\033[2J\033[1;0H')`
+getDate = (date) -> new Date date.getUTCFullYear(), date.getMonth(), date.getDate()
+
+showHelp = (exit = false) ->
+	repeat = (org, length = process.stdout.columns) ->
+		res = ''
+		res += org for i in [0...length//org.length]
+		return res
+
+	cent = (s, xAxis = process.stdout.columns) ->
+		repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
+
+	console.log repeat '='
+	console.log cent('MagisterCLI').bold.cyan
+	console.log cent('A Magister command-line interface written in CoffeeScript.').bold
+	console.log cent('Licensed under the GPLv3 license.').bold
+	console.log repeat '='
+	console.log ''
+
+	for key in _(commands).keys().sort().value()
+		command = commands[key]
+		console.log key.bold + ": #{command.description}"
+
+		for param in (command.params ? [])
+
+			console.log ''
+			console.log '    ' + param.name.underline + " [#{param.type}]: #{param.description}" +
+				if not param.optional? or param.optional is no then ""
+				else if param.optional is yes then " (optional)".cyan
+				else " (default: #{param.optional})".cyan
+			if param.example? then console.log '    Example'.bold + ": #{param.example}"
+
+		console.log repeat '='
+
+	if exit
+		process.exit 0
+	else
+		rl.prompt()
 
 storage.initSync
 	dir: storageDir
@@ -220,15 +225,41 @@ main = (val, magister) ->
 
 	magister.ready (err) ->
 		if err?
-			console.error "Magister returned error while logging in: '#{err.message}'"
+			console.error "Magister returned an error while logging in: '#{err.message}'"
 			process.exit 32
 
 		m = this
 		homeworkResults = null
 		lastMessage = null
-		console.log "Welcome, #{m.profileInfo().firstName()}"
 
-		rl.prompt()
+		date = new Date
+
+		hour = date.getHours()
+		hourDesc =
+			if hour >= 12 && hour < 18 then "afternoon"
+			else if hour >= 18 && hour < 22 then "evening"
+			else if hour >= 22 || (hour >= 0 && hour < 6) then "night"
+			else "morning"
+
+		day = date.getDay() + 1
+		daysToAdd =
+			if day == 6 then 2
+			else if day == 5 then 3
+			else 1
+
+		m.appointments date, moment().add(daysToAdd, 'days').toDate(), no, (e, r) ->
+			if e? then console.log "Error: #{e.message}".red.bold
+			else
+				homeworkResults = _(r)
+					.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
+					.sortBy (a) -> a.begin().getTime()
+					.value()
+
+					console.log "Good #{hourDesc}, #{m.profileInfo().firstName()}. " +
+					"You have #{homeworkResults.length} upcoming appointments."
+
+					rl.prompt()
+
 		rl.on 'line', (l) ->
 			splitted = l.trim().split ' '
 			params = splitted[1..]
@@ -469,7 +500,7 @@ main = (val, magister) ->
 					if _.isNaN(limit)
 						if params[0].toLowerCase() is 'new'
 							editor = process.env.EDITOR ? 'vi'
-							file = "#{mahGisterDir}/MESSAGE_EDIT"
+							file = "#{magisterDir}/MESSAGE_EDIT"
 							fs.writeFileSync file, 'to (seperator: \',\'): \nsubject: \n\n### Type body under this line###\n\n'
 
 							resp = spawn editor, [file], stdio: 'inherit'
