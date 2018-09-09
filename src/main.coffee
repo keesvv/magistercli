@@ -691,7 +691,9 @@ main = (val, magister) ->
 
 				when '' then rl.prompt()
 
-				else showHelp()
+				else
+					console.log "Unknown command. Type ".bold.red + "help".bold.yellow + " for a list of commands.".bold.red
+					rl.prompt()
 
 if (val = storage.getItemSync('user'))? then main val
 else
