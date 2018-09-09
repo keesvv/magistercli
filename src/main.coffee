@@ -179,12 +179,11 @@ showHelp = (exit = false) ->
 	cent = (s, xAxis = process.stdout.columns) ->
 		repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
 
-	console.log repeat '='
+	console.log '\n' + repeat('=')
 	console.log cent('MagisterCLI').bold.cyan
 	console.log cent('A Magister command-line interface written in CoffeeScript.').bold
 	console.log cent('Licensed under the GPLv3 license.').bold
-	console.log repeat '='
-	console.log ''
+	console.log repeat('=') + '\n'
 
 	for key in _(commands).keys().sort().value()
 		command = commands[key]
@@ -212,7 +211,9 @@ storage.initSync
 unless fs.existsSync attachmentsDir
 	fs.mkdirSync attachmentsDir
 
-rl.on 'close', -> process.exit 0
+rl.on 'close', ->
+	console.log '\nGoodbye!'
+	process.exit 0
 
 if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
 	showHelp yes
