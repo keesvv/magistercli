@@ -1,14 +1,4 @@
-MahGister(7)
+MagisterCLI
 =========
 
-A tiny CLI to Magister, using [Magister.js](http://simplygits.github.io/MagisterJS/).
-
-Build with `grunt`.
-
-Install with `npm install -g mahgister` (if that doesn't work, try `sudo npm install -g mahgister`). 
-
-Show commands with `MahGister --help`.
-
-License
-===
-[GPLv3](LICENSE)
+**A Magister command-line interface written in JavaScript. Fork of [MahGister](https://github.com/lieuwex/MahGister)**
