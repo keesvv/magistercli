@@ -212,7 +212,7 @@ unless fs.existsSync attachmentsDir
 	fs.mkdirSync attachmentsDir
 
 rl.on 'close', ->
-	console.log '\nGoodbye!'
+	console.log '\nGoodbye!'.magenta
 	process.exit 0
 
 if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
@@ -252,14 +252,23 @@ main = (val, magister) ->
 			if e? then console.log "Error: #{e.message}".red.bold
 			else
 				homeworkResults = _(r)
-					.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
-					.sortBy (a) -> a.begin().getTime()
+					.filter (i) -> i.begin().getTime() > _.now() and not i.fullDay() and i.content()? and i.infoType() == 1 and not i.isDone()
 					.value()
 
-					console.log "Good #{hourDesc}, #{m.profileInfo().firstName()}. " +
-					"You have #{homeworkResults.length} upcoming appointments."
+				str = ""
+				count = homeworkResults.length
+				str += "Good #{hourDesc}, #{m.profileInfo().firstName()}.".cyan + " You have "
 
-					rl.prompt()
+				if count > 0
+					str += count.toString().red
+				else
+					str += count.toString().green
+
+				str += " upcoming appointments."
+
+				console.log str
+
+				rl.prompt()
 
 		rl.on 'line', (l) ->
 			splitted = l.trim().split ' '
@@ -337,38 +346,37 @@ main = (val, magister) ->
 											contentReplaced
 									)
 
-								# if appointment.isDone() then s = s.green
-
 								console.log ( switch appointment.infoType()
 									when 1 then s.blue
 									when 2, 3, 4, 5 then s.red
 									else s
 								)
 							else
-								console.log "Appointments for #{moment(date).format "dddd D MMMM YYYY"}\n".underline
+								console.log "Appointments for #{moment(date).format "dddd D MMMM YYYY"}\n".bold.underline
 								for appointment, i in r then do (appointment) ->
 									addZero = (s) -> if r.length > 10 and ('' + s).length isnt 2 then "0#{s}" else s
 									s = "#{addZero i}: "
 									if appointment.beginBySchoolHour()?
-										if appointment.isDone()
-											s += "[#{appointment.beginBySchoolHour()}] ".green
-										else
-											s += "[#{appointment.beginBySchoolHour()}] "
+										s += "[#{appointment.beginBySchoolHour()}] "
 									else
-										s += '[ ] '
+										s += '    '
 
 									if appointment.fullDay()
 										s += '   Full Day  \t'
 									else
 										s += "#{moment(appointment.begin()).format("HH:mm")} - #{moment(appointment.end()).format("HH:mm")}	"
 									if appointment.scrapped()
-										s += '-'.red
+										s += '-'
+										s = s.red
 									else
 										s += appointment.description()
 
+									if appointment.isDone()
+										s = s.green
+
 									console.log ( switch appointment.infoType()
 										# Homework
-										when 1 then s.blue
+										when 1 then s.cyan
 
 										# Appointment
 										when 2, 3, 4, 5 then s.yellow
