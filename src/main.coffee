@@ -324,7 +324,8 @@ main = (val, magister) ->
 								else
 									s += appointment.description() + '    '
 								if appointment.scrapped()
-									s += 'SCRAPPED'.cyan
+									s += '-'
+									s = s.red
 								else
 									s += (
 										contentTrimmed = appointment.content().trim()
@@ -336,7 +337,7 @@ main = (val, magister) ->
 											contentReplaced
 									)
 
-								if appointment.isDone() then s = s.dim
+								# if appointment.isDone() then s = s.green
 
 								console.log ( switch appointment.infoType()
 									when 1 then s.blue
@@ -349,7 +350,10 @@ main = (val, magister) ->
 									addZero = (s) -> if r.length > 10 and ('' + s).length isnt 2 then "0#{s}" else s
 									s = "#{addZero i}: "
 									if appointment.beginBySchoolHour()?
-										s += "[#{appointment.beginBySchoolHour()}] "
+										if appointment.isDone()
+											s += "[#{appointment.beginBySchoolHour()}] ".green
+										else
+											s += "[#{appointment.beginBySchoolHour()}] "
 									else
 										s += '[ ] '
 
@@ -358,15 +362,16 @@ main = (val, magister) ->
 									else
 										s += "#{moment(appointment.begin()).format("HH:mm")} - #{moment(appointment.end()).format("HH:mm")}	"
 									if appointment.scrapped()
-										s += 'SCRAPPED'.cyan
+										s += '-'.red
 									else
 										s += appointment.description()
 
-									if appointment.isDone() then s = s.dim
-
 									console.log ( switch appointment.infoType()
+										# Homework
 										when 1 then s.blue
-										when 2, 3, 4, 5 then s.red
+
+										# Appointment
+										when 2, 3, 4, 5 then s.yellow
 										else s
 									)
 
