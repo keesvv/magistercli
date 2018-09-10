@@ -179,11 +179,12 @@ showHelp = (exit = false) ->
 	cent = (s, xAxis = process.stdout.columns) ->
 		repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
 
-	console.log '\n' + repeat('=')
+	console.log '\n' + repeat('-')
 	console.log cent('MagisterCLI').bold.cyan
 	console.log cent('A Magister command-line interface written in CoffeeScript.').bold
+	console.log cent('Credits to Kees van Voorthuizen and Lieuwe Rooijakkers.')
 	console.log cent('Licensed under the GPLv3 license.').bold
-	console.log repeat('=') + '\n'
+	console.log repeat('-') + '\n'
 
 	for key in _(commands).keys().sort().value()
 		command = commands[key]
@@ -198,7 +199,7 @@ showHelp = (exit = false) ->
 				else " (default: #{param.optional})".cyan
 			if param.example? then console.log '    Example'.bold + ": #{param.example}"
 
-		console.log repeat '='
+		console.log repeat '-'
 
 	if exit
 		process.exit 0
@@ -701,6 +702,8 @@ main = (val, magister) ->
 							rl.prompt()
 
 				when 'exit' then rl.close()
+
+				when 'help' then showHelp()
 
 				when '' then rl.prompt()
 
