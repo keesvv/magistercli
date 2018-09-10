@@ -45,12 +45,14 @@ rl = readline.createInterface
 commands =
 	'help':
 		description: 'Shows this page.'
-	'who':
-		description: 'Displays the name of the current logged in user.'
+	'name':
+		description: 'Displays the name of the current user.'
+	'info':
+		description: 'Displays the profile information of the current user.'
 	'clear':
 		description: 'Clears the screen.'
 	'appointments':
-		description: 'Shows a list of the appointments of the user.'
+		description: 'Shows a list of the appointments of the current user.'
 		params: [
 			{
 				name: 'days'
@@ -72,13 +74,13 @@ commands =
 	'tests':
 		description: 'Returns the tests of the current user.'
 	'messages':
-		description: 'Goes into messages mode and shows a list of messages.'
+		description: 'Enters messages mode and shows a list of messages.'
 		params: [
 			{
 				name: 'inbox'
 				type: 'String'
 				description: 'The name of the inbox to open.'
-				optional: 'Postvak In'
+				optional: 'Postvak IN'
 			}
 		]
 	'messages new':
@@ -91,7 +93,7 @@ commands =
 			{
 				name: 'messageId'
 				type: 'Number'
-				description: 'The ID of the message to download the attachment from. Fallsback to the previous message if none is given.'
+				description: 'The ID of the message to download the attachment from. Falls back to the previous message if none is given.'
 				optional: yes
 			}
 			{
