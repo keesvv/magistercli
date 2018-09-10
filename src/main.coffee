@@ -284,6 +284,17 @@ main = (val, magister) ->
 						console.log "#{m.profileInfo().firstName()} #{m.profileInfo().lastName()}"
 					rl.prompt()
 
+				when 'info'
+					birthDate = m.profileInfo().birthDate()
+
+					console.log "Full name:\t".bold + "#{m.profileInfo().officialFirstNames()} #{if m.profileInfo().namePrefix()? then m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
+					console.log "Birth date:\t".bold + "#{birthDate.getDate()}-#{birthDate.getMonth() + 1}-#{birthDate.getFullYear()}"
+					console.log "Username:\t".bold + m.username
+					console.log "School name:\t".bold + m.magisterSchool.name
+					console.log "School url:\t".bold + m.magisterSchool.url
+
+					rl.prompt()
+
 				when 'clear'
 					clearConsole()
 					rl.prompt()
