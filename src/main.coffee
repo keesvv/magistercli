@@ -463,6 +463,7 @@ main = (val, magister) ->
 						console.log if appointment.infoType() > 1 then s.red else s
 						rl.prompt()
 
+					console.log s
 					else
 						m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
 							if e? then console.log "Error: #{e.message}".red.bold
