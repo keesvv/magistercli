@@ -695,6 +695,11 @@ main = (val, magister) ->
 			else if day == 5 then 3
 			else 1
 
+		args = _.last(process.argv).toLowerCase()
+		if args == "--raw"
+			rl = null
+			console.log m
+			exit()
 		m.appointments date, moment().add(daysToAdd, 'days').toDate(), no, (e, r) ->
 			if e? then console.log "Error: #{e.message}".red.bold
 			else
