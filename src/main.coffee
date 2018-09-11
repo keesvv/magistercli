@@ -645,11 +645,19 @@ parseArgs = (m, l, isPrompt = true) ->
 						else if param.optional is yes then " (optional)".cyan
 						else " (default: #{param.optional})".cyan
 					if param.example? then console.log '    Example'.bold + ": #{param.example}"
+<<<<<<< HEAD
 
 				console.log repeat '-'
 
 			if isPrompt then rl.prompt()
 
+=======
+
+				console.log repeat '-'
+			
+			if isPrompt then rl.prompt()
+
+>>>>>>> 8d790388cc44409a68321a91152dd47289292a9b
 		when 'exit' then rl.close()
 
 		when '' then rl.prompt()
