@@ -193,7 +193,7 @@ parseArgs = (m, l, isPrompt = true) ->
 				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
 			else
 				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().lastName()}"
-			if isPrompt then rl.prompt()
+			rl.prompt() unless isPrompt
 
 		when 'info'
 			birthDate = m.profileInfo().birthDate()
@@ -204,11 +204,11 @@ parseArgs = (m, l, isPrompt = true) ->
 			console.log "School name:\t".bold + m.magisterSchool.name
 			console.log "School url:\t".bold + m.magisterSchool.url
 
-			if isPrompt then rl.prompt()
+			rl.prompt() unless isPrompt
 
 		when 'clear'
 			clearConsole()
-			if isPrompt then rl.prompt()
+			rl.prompt() unless isPrompt
 
 		when 'appointments'
 			inf = params[0]
@@ -236,7 +236,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 			if _.isNaN date.getTime() # User entered invalid date.
 				console.log 'Invalid date or day delta entered.'.red.bold
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 				return
 
 			m.appointments date, no, (e, r) ->
@@ -246,7 +246,7 @@ parseArgs = (m, l, isPrompt = true) ->
 						appointment = r[+id]
 						unless appointment
 							console.log "Appointment ##{id} not found on #{days[moment(date).weekday()]}.".red.bold
-							if isPrompt then rl.prompt()
+							rl.prompt() unless isPrompt
 							return
 
 						s = ''
@@ -308,7 +308,7 @@ parseArgs = (m, l, isPrompt = true) ->
 								else s
 							)
 
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 
 		when 'homework'
 			if params.length is 0
@@ -339,7 +339,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 				if homeworkResults?
 					filterAndShow homeworkResults
-					if isPrompt then rl.prompt()
+					rl.prompt() unless isPrompt
 				else
 					m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
 						if e? then console.log "Error: #{e.message}".red.bold
@@ -351,17 +351,17 @@ parseArgs = (m, l, isPrompt = true) ->
 
 							filterAndShow homeworkResults
 
-						if isPrompt then rl.prompt()
+						rl.prompt() unless isPrompt
 
 			else if _.isNaN +params[0]
 				console.log 'Use homework <index>'.red.bold
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 
 			else if homeworkResults?
 				appointment = homeworkResults[+params[0]]
 
 				unless appointment?
-					if isPrompt then rl.prompt()
+					rl.prompt() unless isPrompt
 					return
 
 				s = ''
@@ -372,7 +372,7 @@ parseArgs = (m, l, isPrompt = true) ->
 				if appointment.isDone() then s = s.dim
 
 				console.log if appointment.infoType() > 1 then s.red else s
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 
 			else
 				m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
@@ -386,7 +386,7 @@ parseArgs = (m, l, isPrompt = true) ->
 						appointment = homeworkResults[+params[0]]
 
 						unless appointment?
-							if isPrompt then rl.prompt()
+							rl.prompt() unless isPrompt
 							return
 
 						s = ''
@@ -398,7 +398,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 						console.log if appointment.infoType() > 1 then s.red else s
 
-						if isPrompt then rl.prompt()
+						rl.prompt() unless isPrompt
 
 		when 'tests'
 			filterAndShow = (appointments) ->
@@ -418,7 +418,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 			if homeworkResults?
 				filterAndShow homeworkResults
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 			else
 				m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
 					if e? then console.log "Error: #{e.message}"
@@ -430,7 +430,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 							filterAndShow homeworkResults
 
-					if isPrompt then rl.prompt()
+					rl.prompt() unless isPrompt
 
 		when 'messages'
 			folder = m.inbox() # Use inbox as default MessageFolder.
@@ -461,7 +461,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 					fs.unlink file # fuck errors
 
-					if isPrompt then rl.prompt()
+					rl.prompt() unless isPrompt
 					return
 				else
 					folder = m.messageFolders(params[0])[0]
@@ -492,7 +492,7 @@ parseArgs = (m, l, isPrompt = true) ->
 							val = id.trim()
 
 							if val.length is 0
-								if isPrompt then rl.prompt()
+								rl.prompt() unless isPrompt
 								return
 
 							if val.toLowerCase() is 'list'
@@ -590,7 +590,7 @@ parseArgs = (m, l, isPrompt = true) ->
 		when 'done'
 			if params.length < 2
 				console.log 'Use done <day> <appointmentId>'
-				if isPrompt then rl.prompt()
+				rl.prompt() unless isPrompt
 				return
 
 			inf = params[0]
@@ -623,7 +623,7 @@ parseArgs = (m, l, isPrompt = true) ->
 					else
 						console.log "Appointment ##{params[1]} not found on #{days[moment(date).weekday()]}."
 
-					if isPrompt then rl.prompt()
+					rl.prompt() unless isPrompt
 
 		when 'help'
 			console.log '\n' + repeat('-')
@@ -648,7 +648,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 				console.log repeat '-'
 
-			if isPrompt then rl.prompt()
+			rl.prompt() unless isPrompt
 
 		when 'exit' then rl.close()
 
