@@ -27,6 +27,7 @@
   "author": "Kees van Voorthuizen",
   "license": "GPL-3.0",
   "dependencies": {
+    "circular-json": "^0.5.5",
     "colors": "^1.1.2",
     "lodash": "^4.17.4",
     "magister.js": "~1.24.0",

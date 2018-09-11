@@ -28,6 +28,7 @@ colors = require 'colors'
 fs = require 'fs'
 spawn = require('child_process').spawnSync
 { Magister, MagisterSchool } = require 'magister.js'
+circularJSON = require('circular-json')
 
 rl = readline.createInterface
 	input: process.stdin
@@ -51,6 +52,7 @@ rl.on 'close', ->
 	process.exit 0
 
 exit = -> process.exit()
+
 commands =
 	'help':
 		description: 'Shows this page.'
@@ -194,6 +196,7 @@ parseArgs = (m, l, isPrompt = true) ->
 				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
 			else
 				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().lastName()}"
+
 			rl.prompt() unless isPrompt
 
 		when 'info'
@@ -657,7 +660,7 @@ parseArgs = (m, l, isPrompt = true) ->
 
 		else
 			console.log "Unknown command. Type ".bold.red + "help".bold.yellow + " for a list of commands.".bold.red
-			rl.prompt()
+			rl.prompt() unless isPrompt
 
 storage.initSync
 	dir: storageDir
@@ -696,10 +699,20 @@ main = (val, magister) ->
 			else 1
 
 		args = _.last(process.argv).toLowerCase()
+		# if args.length > 0 && args.startsWith("-")
+		# 	if args.startsWith("-") and not args.startsWith("--")
+		# 		args = args.substring(1)
+		# 	else if args.startsWith("--")
+		# 		args = args.substring(2)
+    #
+		# 	parseArgs m, args, false
+		# 	return
+
 		if args == "--raw"
 			rl = null
-			console.log m
+			console.log circularJSON.stringify(m)
 			exit()
+
 		m.appointments date, moment().add(daysToAdd, 'days').toDate(), no, (e, r) ->
 			if e? then console.log "Error: #{e.message}".red.bold
 			else
