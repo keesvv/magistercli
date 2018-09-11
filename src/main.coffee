@@ -50,6 +50,7 @@ rl.on 'close', ->
 	console.log '\nGoodbye!'.magenta
 	process.exit 0
 
+exit = -> process.exit()
 commands =
 	'help':
 		description: 'Shows this page.'
