@@ -21,6 +21,17 @@ For Windows users, this is not needed.
 #### Install with npm
 MagisterCLI currently hasn't been uploaded to NPM yet, so for now you'll have to build it from source.
 
+#### Some more information
+
+> Hint: To get raw JSON data from the Magister API of the current user, just type `./magistercli --raw`.
+
+Roadmap
+=========
+
+- Add support for more command-line arguments
+- Add command for an overview of recent grades
+- And a lot more...
+
 License
 =========
 
