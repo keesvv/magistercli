@@ -208,6 +208,457 @@ showHelp = (exit = false) ->
 	else
 		rl.prompt()
 
+parseArgs = (m, l, isPrompt = true) ->
+	splitted = l.trim().split ' '
+	params = splitted[1..]
+	switch splitted[0].toLowerCase()
+		when 'name'
+			if m.profileInfo().namePrefix()?
+				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
+			else
+				console.log "#{m.profileInfo().firstName()} #{m.profileInfo().lastName()}"
+			if isPrompt then rl.prompt()
+
+		when 'info'
+			birthDate = m.profileInfo().birthDate()
+
+			console.log "Full name:\t".bold + "#{m.profileInfo().officialFirstNames()} #{if m.profileInfo().namePrefix()? then m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
+			console.log "Birth date:\t".bold + "#{birthDate.getDate()}-#{birthDate.getMonth() + 1}-#{birthDate.getFullYear()}"
+			console.log "Username:\t".bold + m.username
+			console.log "School name:\t".bold + m.magisterSchool.name
+			console.log "School url:\t".bold + m.magisterSchool.url
+
+			if isPrompt then rl.prompt()
+
+		when 'clear'
+			clearConsole()
+			if isPrompt then rl.prompt()
+
+		when 'appointments'
+			inf = params[0]
+			inf ?= 0
+			id = params[1]
+			date = (
+				if (val = /^-?\d+$/.exec(inf)?[0])?
+					new moment().add +val, 'days'
+
+				else if _.includes all, inf.toLowerCase()
+					x = moment()
+					while days[x.weekday()] isnt inf.toLowerCase() and shortDays[x.weekday()] isnt inf.toLowerCase()
+						x.add 1, 'days'
+					x
+
+				else if inf[0] is '-' and _.includes all, inf[1..].toLowerCase()
+					x = moment()
+					while days[x.weekday()] isnt inf[1..].toLowerCase() and shortDays[x.weekday()] isnt inf[1..].toLowerCase()
+						x.add -1, 'days'
+					x
+
+				else
+					moment new Date inf
+			).toDate()
+
+			if _.isNaN date.getTime() # User entered invalid date.
+				console.log 'Invalid date or day delta entered.'.red.bold
+				if isPrompt then rl.prompt()
+				return
+
+			m.appointments date, no, (e, r) ->
+				if e? then console.log "Error: #{e.message}"
+				else
+					if id?
+						appointment = r[+id]
+						unless appointment
+							console.log "Appointment ##{id} not found on #{days[moment(date).weekday()]}.".red.bold
+							if isPrompt then rl.prompt()
+							return
+
+						s = ''
+						s += days[moment(appointment.begin()).weekday()] + '    '
+						if (val = appointment.classes()[0])?
+							s += val + ' '
+							if appointment.location()?
+								s += "#{appointment.location()}    "
+						else
+							s += appointment.description() + '    '
+						if appointment.scrapped()
+							s += '-'
+							s = s.red
+						else
+							s += (
+								contentTrimmed = appointment.content().trim()
+								contentReplaced = contentTrimmed.replace(/[\n\r]+/g, '\n\n')
+
+								if contentTrimmed.split(/[\n\r]+/g).length > 1
+									'\n\n' + contentReplaced
+								else
+									contentReplaced
+							)
+
+						console.log ( switch appointment.infoType()
+							when 1 then s.blue
+							when 2, 3, 4, 5 then s.red
+							else s
+						)
+					else
+						console.log "Appointments for #{moment(date).format "dddd D MMMM YYYY"}\n".bold.underline
+						for appointment, i in r then do (appointment) ->
+							addZero = (s) -> if r.length > 10 and ('' + s).length isnt 2 then "0#{s}" else s
+							s = "#{addZero i}: "
+							if appointment.beginBySchoolHour()?
+								s += "[#{appointment.beginBySchoolHour()}] "
+							else
+								s += '    '
+
+							if appointment.fullDay()
+								s += '   Full Day  \t'
+							else
+								s += "#{moment(appointment.begin()).format("HH:mm")} - #{moment(appointment.end()).format("HH:mm")}	"
+							if appointment.scrapped()
+								s += '-'
+								s = s.red
+							else
+								s += appointment.description()
+
+							if appointment.isDone()
+								s = s.green
+
+							console.log ( switch appointment.infoType()
+								# Homework
+								when 1 then s.cyan
+
+								# Appointment
+								when 2, 3, 4, 5 then s.yellow
+								else s
+							)
+
+				if isPrompt then rl.prompt()
+
+		when 'homework'
+			if params.length is 0
+				filterAndShow = (appointments) ->
+					appointment = _.filter appointments, (a) -> not a.fullDay() and a.content()? and a.infoType() in [1..5]
+
+					index = 0
+					appointmentDays = _(appointments)
+						.map (a) ->
+							return {
+								timestamp: getDate(a.begin()).getTime()
+								appointments: _.filter appointments, (x) -> getDate(x.begin()).getTime() is getDate(a.begin()).getTime()
+							}
+						.uniq (a) -> a.timestamp
+						.value()
+
+					for day in appointmentDays when day.appointments.length > 0
+						s = days[moment(day.timestamp).weekday()] + ': '
+
+						for a, i in day.appointments
+							s += "#{a.classes()[0]} [#{index++}]"
+							s += ', ' if i + 1 isnt day.appointments.length
+
+						if _.some(day.appointments, (a) -> a.infoType() > 1)
+							console.log s.red
+						else
+							console.log s
+
+				if homeworkResults?
+					filterAndShow homeworkResults
+					if isPrompt then rl.prompt()
+				else
+					m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
+						if e? then console.log "Error: #{e.message}".red.bold
+						else
+							homeworkResults = _(r)
+								.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
+								.sortBy (a) -> a.begin().getTime()
+								.value()
+
+							filterAndShow homeworkResults
+
+						if isPrompt then rl.prompt()
+
+			else if _.isNaN +params[0]
+				console.log 'Use homework <index>'.red.bold
+				if isPrompt then rl.prompt()
+
+			else if homeworkResults?
+				appointment = homeworkResults[+params[0]]
+
+				unless appointment?
+					if isPrompt then rl.prompt()
+					return
+
+				s = ''
+				s += days[moment(appointment.begin()).weekday()] + '    '
+				s += appointment.classes()[0] + '    '
+				s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
+
+				if appointment.isDone() then s = s.dim
+
+				console.log if appointment.infoType() > 1 then s.red else s
+				if isPrompt then rl.prompt()
+
+			else
+				m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
+					if e? then console.log "Error: #{e.message}".red.bold
+					else
+						homeworkResults = _(r)
+							.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
+							.sortBy (a) -> a.begin().getTime()
+							.value()
+
+						appointment = homeworkResults[+params[0]]
+
+						unless appointment?
+							if isPrompt then rl.prompt()
+							return
+
+						s = ''
+						s += days[moment(appointment.begin()).weekday()] + '    '
+						s += appointment.classes()[0] + '    '
+						s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
+
+						if appointment.isDone() then s = s.dim
+
+						console.log if appointment.infoType() > 1 then s.red else s
+
+						if isPrompt then rl.prompt()
+
+		when 'tests'
+			filterAndShow = (appointments) ->
+				appointments = _.filter(appointments, (a) -> not a.fullDay() and a.content()? and a.infoType() > 1)
+				first = yes
+				for appointment in appointments then do (appointment) ->
+					s = ''
+					s += days[moment(appointment.begin()).weekday()] + ': '
+					s += appointment.classes()[0] + '    '
+					s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
+
+					if appointment.isDone() then s = s.dim
+
+					console.log('--------------------') unless first
+					console.log s
+					first = no
+
+			if homeworkResults?
+				filterAndShow homeworkResults
+				if isPrompt then rl.prompt()
+			else
+				m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
+					if e? then console.log "Error: #{e.message}"
+					else
+							homeworkResults = _(r)
+								.filter (a) ->  not a.fullDay() and a.content()? and a.infoType() in [1..5]
+								.sortBy (a) -> a.begin().getTime()
+								.value()
+
+							filterAndShow homeworkResults
+
+					if isPrompt then rl.prompt()
+
+		when 'messages'
+			folder = m.inbox() # Use inbox as default MessageFolder.
+
+			if params[0]? then limit = +params[0]
+			if _.isNaN(limit)
+				if params[0].toLowerCase() is 'new'
+					editor = process.env.EDITOR ? 'vi'
+					file = "#{magisterDir}/MESSAGE_EDIT"
+					fs.writeFileSync file, 'to (seperator: \',\'): \nsubject: \n\n### Type body under this line###\n\n'
+
+					resp = spawn editor, [file], stdio: 'inherit'
+					if resp.status isnt 0 or resp.error?
+						console.log 'Error while trying to spawn editor proccess, falling back to ol\' VI.'
+						resp = spawn 'vi', [ file ], stdio: 'inherit'
+
+					data = _.reject fs.readFileSync(file, encoding: 'utf8').split('\n'), (s) -> s.indexOf('###') is 0
+
+					namesRaw = data[0].split(':')[2..].join ':'
+					names = (x.trim() for x in namesRaw.split ',')
+
+					subject = data[1].split(':')[1..].join ':'
+
+					body = data[2..].join '\n'
+
+					m.composeAndSendMessage subject.trim(), body.trim(), names
+					console.log "Sent message to #{names.join(', ')}."
+
+					fs.unlink file # fuck errors
+
+					if isPrompt then rl.prompt()
+					return
+				else
+					folder = m.messageFolders(params[0])[0]
+					limit = if params[1]? then +params[1] else null
+
+			folder.messages { limit }, (e, r) ->
+				if e? then console.log "Error: #{e.message}".red.bold
+				else
+					save = (attachment) ->
+						attachment.download no, (e, r) ->
+							if e? then console.log "Error: #{e.message}".red.bold
+							else
+								rl.write null, {ctrl: true, name: 'u'}
+								console.log "Downloaded #{attachment.name()}"
+								fs.writeFile "#{attachmentsDir}/#{attachment.name()}", r, (e) -> throw e if e?
+
+							ask()
+
+					list = -> for msg, i in r then do (msg) ->
+						s = "[#{i}] "
+						s += "#{msg.sender().description()} "
+						s += msg.subject()
+
+						console.log s
+
+					ask = ->
+						rl.question 'msg> ', (id) ->
+							val = id.trim()
+
+							if val.length is 0
+								if isPrompt then rl.prompt()
+								return
+
+							if val.toLowerCase() is 'list'
+								list()
+								ask()
+								return
+
+							if val.toLowerCase().indexOf('next') > -1
+								amount = 10
+								if val.trim().split(' ').length > 1 and (x = +val.split(' ')[1..]) > 0
+									amount = x
+
+								m.inbox().messages {
+									limit: amount
+									skip: limit
+								}, (err, newMessages) ->
+									if err?
+										console.log "Error while fetching #{amount} new messages.".red.bold
+									else
+										r = r.concat newMessages
+										limit += amount
+
+									list()
+									ask()
+
+								return
+
+							if val.toLowerCase() is 'exit'
+								rl.close()
+								return
+
+							splitted = val.toLowerCase().split(' ')
+							if splitted.length is 2 and splitted[0].toLowerCase() is 'download'
+								if lastMessage?
+									save lastMessage.attachments()[+splitted[1]]
+								else
+									console.log 'No message provided and none read. Read a message or provide one using download <message id> <attachment id>.'.red.bold
+
+								ask()
+								return
+
+							else if splitted.length is 3 and splitted[0].toLowerCase() is 'download'
+								save r[+splitted[1]].attachments()[+splitted[2]]
+								ask()
+								return
+
+							if val.toLowerCase() is 'delete'
+								if lastMessage?
+									(msg = lastMessage).move m.bin()
+									_.remove r, msg
+								else
+									console.log 'No message provided and none read. Read a message or provide one using delete <message id> <attachment id>.'.red.bold
+
+								ask()
+								return
+
+							else if splitted.length is 2 and splitted[0].toLowerCase() is 'delete'
+								(msg = r[+splitted[1]]).move m.bin()
+								_.remove r, msg
+								ask()
+								return
+
+							else if _.isNaN(+val)
+								if val.length is 0 then console.log 'Expected command or number.'.red.bold
+								else console.log "Unknown command: #{val}".red.bold
+								ask()
+								return
+
+							if +val < 0 or +val >= r.length
+								console.log "Given index (#{+val}) out of bounds.".red.bold
+								ask()
+								return
+
+							mail = r[+val]
+							sendDate = moment mail.sendDate()
+							recipients = mail.recipients()[..].map((p) -> p.description()).join ', '
+							attachments = mail.attachments().map((a) -> a.name()).join ', '
+
+							console.log ''
+
+							console.log "From: #{mail.sender().description()}\n" +
+							"Sent: #{days[sendDate.weekday()]} #{sendDate.format('DD-M-YYYY HH:mm:ss')}\n" +
+							"To: #{recipients}\n" +
+							"Subject: #{mail.subject()}\n" +
+							"Attachments: #{attachments}\n\n" +
+							"\"#{mail.body()}\""
+
+							lastMessage = mail
+
+							ask()
+
+					list()
+					ask()
+
+		when 'done'
+			if params.length < 2
+				console.log 'Use done <day> <appointmentId>'
+				if isPrompt then rl.prompt()
+				return
+
+			inf = params[0]
+			date = (
+				if (val = /^-?\d+$/.exec(inf)?[0])?
+					new moment().add val, 'days'
+
+				else if _.includes all, inf.toLowerCase()
+					x = moment()
+					while days[x.weekday()] isnt inf.toLowerCase() and shortDays[x.weekday()] isnt inf.toLowerCase()
+						x.add 1, 'days'
+					x
+
+				else if inf[0] is '-' and _.includes all, inf[1..].toLowerCase()
+					x = moment()
+					while days[x.weekday()] isnt inf[1..].toLowerCase() and shortDays[x.weekday()] isnt inf[1..].toLowerCase()
+						x.add -1, 'days'
+					x
+
+				else
+					moment new Date inf
+			).toDate()
+
+			m.appointments date, no, (e, r) ->
+				if e? then console.log "Error: #{e.message}"
+				else
+					appointment = r[+params[1]]
+					if appointment?
+						appointment.isDone yes
+					else
+						console.log "Appointment ##{params[1]} not found on #{days[moment(date).weekday()]}."
+
+					if isPrompt then rl.prompt()
+
+		when 'exit' then rl.close()
+
+		when 'help' then showHelp()
+
+		when '' then rl.prompt()
+
+		else
+			console.log "Unknown command. Type ".bold.red + "help".bold.yellow + " for a list of commands.".bold.red
+			rl.prompt()
+
 storage.initSync
 	dir: storageDir
 
@@ -218,8 +669,8 @@ rl.on 'close', ->
 	console.log '\nGoodbye!'.magenta
 	process.exit 0
 
-if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
-	showHelp yes
+# if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
+# 	showHelp yes
 
 main = (val, magister) ->
 	magister ?= new Magister
@@ -273,457 +724,8 @@ main = (val, magister) ->
 
 				rl.prompt()
 
-		rl.on 'line', (l) ->
-			splitted = l.trim().split ' '
-			params = splitted[1..]
-			switch splitted[0].toLowerCase()
-				when 'name'
-					if m.profileInfo().namePrefix()?
-						console.log "#{m.profileInfo().firstName()} #{m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
-					else
-						console.log "#{m.profileInfo().firstName()} #{m.profileInfo().lastName()}"
-					rl.prompt()
+		rl.on 'line', (l) -> parseArgs m, l
 
-				when 'info'
-					birthDate = m.profileInfo().birthDate()
-
-					console.log "Full name:\t".bold + "#{m.profileInfo().officialFirstNames()} #{if m.profileInfo().namePrefix()? then m.profileInfo().namePrefix()} #{m.profileInfo().lastName()}"
-					console.log "Birth date:\t".bold + "#{birthDate.getDate()}-#{birthDate.getMonth() + 1}-#{birthDate.getFullYear()}"
-					console.log "Username:\t".bold + m.username
-					console.log "School name:\t".bold + m.magisterSchool.name
-					console.log "School url:\t".bold + m.magisterSchool.url
-
-					rl.prompt()
-
-				when 'clear'
-					clearConsole()
-					rl.prompt()
-
-				when 'appointments'
-					inf = params[0]
-					inf ?= 0
-					id = params[1]
-					date = (
-						if (val = /^-?\d+$/.exec(inf)?[0])?
-							new moment().add +val, 'days'
-
-						else if _.includes all, inf.toLowerCase()
-							x = moment()
-							while days[x.weekday()] isnt inf.toLowerCase() and shortDays[x.weekday()] isnt inf.toLowerCase()
-								x.add 1, 'days'
-							x
-
-						else if inf[0] is '-' and _.includes all, inf[1..].toLowerCase()
-							x = moment()
-							while days[x.weekday()] isnt inf[1..].toLowerCase() and shortDays[x.weekday()] isnt inf[1..].toLowerCase()
-								x.add -1, 'days'
-							x
-
-						else
-							moment new Date inf
-					).toDate()
-
-					if _.isNaN date.getTime() # User entered invalid date.
-						console.log 'Invalid date or day delta entered.'.red.bold
-						rl.prompt()
-						return
-
-					m.appointments date, no, (e, r) ->
-						if e? then console.log "Error: #{e.message}"
-						else
-							if id?
-								appointment = r[+id]
-								unless appointment
-									console.log "Appointment ##{id} not found on #{days[moment(date).weekday()]}.".red.bold
-									rl.prompt()
-									return
-
-								s = ''
-								s += days[moment(appointment.begin()).weekday()] + '    '
-								if (val = appointment.classes()[0])?
-									s += val + ' '
-									if appointment.location()?
-										s += "#{appointment.location()}    "
-								else
-									s += appointment.description() + '    '
-								if appointment.scrapped()
-									s += '-'
-									s = s.red
-								else
-									s += (
-										contentTrimmed = appointment.content().trim()
-										contentReplaced = contentTrimmed.replace(/[\n\r]+/g, '\n\n')
-
-										if contentTrimmed.split(/[\n\r]+/g).length > 1
-											'\n\n' + contentReplaced
-										else
-											contentReplaced
-									)
-
-								console.log ( switch appointment.infoType()
-									when 1 then s.blue
-									when 2, 3, 4, 5 then s.red
-									else s
-								)
-							else
-								console.log "Appointments for #{moment(date).format "dddd D MMMM YYYY"}\n".bold.underline
-								for appointment, i in r then do (appointment) ->
-									addZero = (s) -> if r.length > 10 and ('' + s).length isnt 2 then "0#{s}" else s
-									s = "#{addZero i}: "
-									if appointment.beginBySchoolHour()?
-										s += "[#{appointment.beginBySchoolHour()}] "
-									else
-										s += '    '
-
-									if appointment.fullDay()
-										s += '   Full Day  \t'
-									else
-										s += "#{moment(appointment.begin()).format("HH:mm")} - #{moment(appointment.end()).format("HH:mm")}	"
-									if appointment.scrapped()
-										s += '-'
-										s = s.red
-									else
-										s += appointment.description()
-
-									if appointment.isDone()
-										s = s.green
-
-									console.log ( switch appointment.infoType()
-										# Homework
-										when 1 then s.cyan
-
-										# Appointment
-										when 2, 3, 4, 5 then s.yellow
-										else s
-									)
-
-						rl.prompt()
-
-				when 'homework'
-					if params.length is 0
-						filterAndShow = (appointments) ->
-							appointment = _.filter appointments, (a) -> not a.fullDay() and a.content()? and a.infoType() in [1..5]
-
-							index = 0
-							appointmentDays = _(appointments)
-								.map (a) ->
-									return {
-										timestamp: getDate(a.begin()).getTime()
-										appointments: _.filter appointments, (x) -> getDate(x.begin()).getTime() is getDate(a.begin()).getTime()
-									}
-								.uniq (a) -> a.timestamp
-								.value()
-
-							for day in appointmentDays when day.appointments.length > 0
-								s = days[moment(day.timestamp).weekday()] + ': '
-
-								for a, i in day.appointments
-									s += "#{a.classes()[0]} [#{index++}]"
-									s += ', ' if i + 1 isnt day.appointments.length
-
-								if _.some(day.appointments, (a) -> a.infoType() > 1)
-									console.log s.red
-								else
-									console.log s
-
-						if homeworkResults?
-							filterAndShow homeworkResults
-							rl.prompt()
-						else
-							m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
-								if e? then console.log "Error: #{e.message}".red.bold
-								else
-									homeworkResults = _(r)
-										.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
-										.sortBy (a) -> a.begin().getTime()
-										.value()
-
-									filterAndShow homeworkResults
-
-								rl.prompt()
-
-					else if _.isNaN +params[0]
-						console.log 'Use homework <index>'.red.bold
-						rl.prompt()
-
-					else if homeworkResults?
-						appointment = homeworkResults[+params[0]]
-
-						unless appointment?
-							rl.prompt()
-							return
-
-						s = ''
-						s += days[moment(appointment.begin()).weekday()] + '    '
-						s += appointment.classes()[0] + '    '
-						s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
-
-						if appointment.isDone() then s = s.dim
-
-						console.log if appointment.infoType() > 1 then s.red else s
-						rl.prompt()
-
-					console.log s
-					else
-						m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
-							if e? then console.log "Error: #{e.message}".red.bold
-							else
-								homeworkResults = _(r)
-									.filter (a) -> a.begin().getTime() > _.now() and not a.fullDay() and a.content()? and a.infoType() in [1..5]
-									.sortBy (a) -> a.begin().getTime()
-									.value()
-
-								appointment = homeworkResults[+params[0]]
-
-								unless appointment?
-									rl.prompt()
-									return
-
-								s = ''
-								s += days[moment(appointment.begin()).weekday()] + '    '
-								s += appointment.classes()[0] + '    '
-								s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
-
-								if appointment.isDone() then s = s.dim
-
-								console.log if appointment.infoType() > 1 then s.red else s
-
-								rl.prompt()
-
-				when 'tests'
-					filterAndShow = (appointments) ->
-						appointments = _.filter(appointments, (a) -> not a.fullDay() and a.content()? and a.infoType() > 1)
-						first = yes
-						for appointment in appointments then do (appointment) ->
-							s = ''
-							s += days[moment(appointment.begin()).weekday()] + ': '
-							s += appointment.classes()[0] + '    '
-							s += appointment.content().trim().replace(/[\n\r]+/g, '; ')
-
-							if appointment.isDone() then s = s.dim
-
-							console.log('--------------------') unless first
-							console.log s.red
-							first = no
-
-					if homeworkResults?
-						filterAndShow homeworkResults
-						rl.prompt()
-					else
-						m.appointments new Date(), moment().add(7, 'days').toDate(), no, (e, r) ->
-							if e? then console.log "Error: #{e.message}"
-							else
-									homeworkResults = _(r)
-										.filter (a) ->  not a.fullDay() and a.content()? and a.infoType() in [1..5]
-										.sortBy (a) -> a.begin().getTime()
-										.value()
-
-									filterAndShow homeworkResults
-
-							rl.prompt()
-
-				when 'messages'
-					folder = m.inbox() # Use inbox as default MessageFolder.
-
-					if params[0]? then limit = +params[0]
-					if _.isNaN(limit)
-						if params[0].toLowerCase() is 'new'
-							editor = process.env.EDITOR ? 'vi'
-							file = "#{magisterDir}/MESSAGE_EDIT"
-							fs.writeFileSync file, 'to (seperator: \',\'): \nsubject: \n\n### Type body under this line###\n\n'
-
-							resp = spawn editor, [file], stdio: 'inherit'
-							if resp.status isnt 0 or resp.error?
-								console.log 'Error while trying to spawn editor proccess, falling back to ol\' VI.'
-								resp = spawn 'vi', [ file ], stdio: 'inherit'
-
-							data = _.reject fs.readFileSync(file, encoding: 'utf8').split('\n'), (s) -> s.indexOf('###') is 0
-
-							namesRaw = data[0].split(':')[2..].join ':'
-							names = (x.trim() for x in namesRaw.split ',')
-
-							subject = data[1].split(':')[1..].join ':'
-
-							body = data[2..].join '\n'
-
-							m.composeAndSendMessage subject.trim(), body.trim(), names
-							console.log "Sent message to #{names.join(', ')}."
-
-							fs.unlink file # fuck errors
-
-							rl.prompt()
-							return
-						else
-							folder = m.messageFolders(params[0])[0]
-							limit = if params[1]? then +params[1] else null
-
-					folder.messages { limit }, (e, r) ->
-						if e? then console.log "Error: #{e.message}".red.bold
-						else
-							save = (attachment) ->
-								attachment.download no, (e, r) ->
-									if e? then console.log "Error: #{e.message}".red.bold
-									else
-										rl.write null, {ctrl: true, name: 'u'}
-										console.log "Downloaded #{attachment.name()}"
-										fs.writeFile "#{attachmentsDir}/#{attachment.name()}", r, (e) -> throw e if e?
-
-									ask()
-
-							list = -> for msg, i in r then do (msg) ->
-								s = "[#{i}] "
-								s += "#{msg.sender().description()} "
-								s += msg.subject()
-
-								console.log s
-
-							ask = ->
-								rl.question 'msg> ', (id) ->
-									val = id.trim()
-
-									if val.length is 0
-										rl.prompt()
-										return
-
-									if val.toLowerCase() is 'list'
-										list()
-										ask()
-										return
-
-									if val.toLowerCase().indexOf('next') > -1
-										amount = 10
-										if val.trim().split(' ').length > 1 and (x = +val.split(' ')[1..]) > 0
-											amount = x
-
-										m.inbox().messages {
-											limit: amount
-											skip: limit
-										}, (err, newMessages) ->
-											if err?
-												console.log "Error while fetching #{amount} new messages.".red.bold
-											else
-												r = r.concat newMessages
-												limit += amount
-
-											list()
-											ask()
-
-										return
-
-									if val.toLowerCase() is 'exit'
-										rl.close()
-										return
-
-									splitted = val.toLowerCase().split(' ')
-									if splitted.length is 2 and splitted[0].toLowerCase() is 'download'
-										if lastMessage?
-											save lastMessage.attachments()[+splitted[1]]
-										else
-											console.log 'No message provided and none read. Read a message or provide one using download <message id> <attachment id>.'.red.bold
-
-										ask()
-										return
-
-									else if splitted.length is 3 and splitted[0].toLowerCase() is 'download'
-										save r[+splitted[1]].attachments()[+splitted[2]]
-										ask()
-										return
-
-									if val.toLowerCase() is 'delete'
-										if lastMessage?
-											(msg = lastMessage).move m.bin()
-											_.remove r, msg
-										else
-											console.log 'No message provided and none read. Read a message or provide one using delete <message id> <attachment id>.'.red.bold
-
-										ask()
-										return
-
-									else if splitted.length is 2 and splitted[0].toLowerCase() is 'delete'
-										(msg = r[+splitted[1]]).move m.bin()
-										_.remove r, msg
-										ask()
-										return
-
-									else if _.isNaN(+val)
-										if val.length is 0 then console.log 'Expected command or number.'.red.bold
-										else console.log "Unknown command: #{val}".red.bold
-										ask()
-										return
-
-									if +val < 0 or +val >= r.length
-										console.log "Given index (#{+val}) out of bounds.".red.bold
-										ask()
-										return
-
-									mail = r[+val]
-									sendDate = moment mail.sendDate()
-									recipients = mail.recipients()[..].map((p) -> p.description()).join ', '
-									attachments = mail.attachments().map((a) -> a.name()).join ', '
-
-									console.log ''
-
-									console.log "From: #{mail.sender().description()}\n" +
-									"Sent: #{days[sendDate.weekday()]} #{sendDate.format('DD-M-YYYY HH:mm:ss')}\n" +
-									"To: #{recipients}\n" +
-									"Subject: #{mail.subject()}\n" +
-									"Attachments: #{attachments}\n\n" +
-									"\"#{mail.body()}\""
-
-									lastMessage = mail
-
-									ask()
-
-							list()
-							ask()
-
-				when 'done'
-					if params.length < 2
-						console.log 'Use done <day> <appointmentId>'
-						rl.prompt()
-						return
-
-					inf = params[0]
-					date = (
-						if (val = /^-?\d+$/.exec(inf)?[0])?
-							new moment().add val, 'days'
-
-						else if _.includes all, inf.toLowerCase()
-							x = moment()
-							while days[x.weekday()] isnt inf.toLowerCase() and shortDays[x.weekday()] isnt inf.toLowerCase()
-								x.add 1, 'days'
-							x
-
-						else if inf[0] is '-' and _.includes all, inf[1..].toLowerCase()
-							x = moment()
-							while days[x.weekday()] isnt inf[1..].toLowerCase() and shortDays[x.weekday()] isnt inf[1..].toLowerCase()
-								x.add -1, 'days'
-							x
-
-						else
-							moment new Date inf
-					).toDate()
-
-					m.appointments date, no, (e, r) ->
-						if e? then console.log "Error: #{e.message}"
-						else
-							appointment = r[+params[1]]
-							if appointment?
-								appointment.isDone yes
-							else
-								console.log "Appointment ##{params[1]} not found on #{days[moment(date).weekday()]}."
-
-							rl.prompt()
-
-				when 'exit' then rl.close()
-
-				when 'help' then showHelp()
-
-				when '' then rl.prompt()
-
-				else
-					console.log "Unknown command. Type ".bold.red + "help".bold.yellow + " for a list of commands.".bold.red
-					rl.prompt()
 
 if (val = storage.getItemSync('user'))? then main val
 else
