@@ -42,6 +42,10 @@ rl = readline.createInterface
 
 		[ filtered, s ]
 
+rl.on 'close', ->
+	console.log '\nGoodbye!'.magenta
+	process.exit 0
+
 commands =
 	'help':
 		description: 'Shows this page.'
@@ -664,10 +668,6 @@ storage.initSync
 
 unless fs.existsSync attachmentsDir
 	fs.mkdirSync attachmentsDir
-
-rl.on 'close', ->
-	console.log '\nGoodbye!'.magenta
-	process.exit 0
 
 # if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
 # 	showHelp yes
