@@ -1,6 +1,8 @@
 MagisterCLI
 =========
 
+[![CodeFactor](https://www.codefactor.io/repository/github/keesvv/magistercli/badge)](https://www.codefactor.io/repository/github/keesvv/magistercli)
+
 A Magister command-line interface written in CoffeeScript. Fork of [MahGister](https://github.com/lieuwex/MahGister).
 Credits to [@lieuwex](https://github.com/lieuwex) (Lieuwe Rooijakkers).
 
