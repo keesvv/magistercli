@@ -176,41 +176,13 @@ all = days.concat shortDays
 clearConsole = -> `console.log('\033[2J\033[1;0H')`
 getDate = (date) -> new Date date.getUTCFullYear(), date.getMonth(), date.getDate()
 
-showHelp = (exit = false) ->
-	repeat = (org, length = process.stdout.columns) ->
-		res = ''
-		res += org for i in [0...length//org.length]
-		return res
+repeat = (org, length = process.stdout.columns) ->
+	res = ''
+	res += org for i in [0...length//org.length]
+	return res
 
-	cent = (s, xAxis = process.stdout.columns) ->
-		repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
-
-	console.log '\n' + repeat('-')
-	console.log cent('MagisterCLI').bold.cyan
-	console.log cent('A Magister command-line interface written in CoffeeScript.').bold
-	console.log cent('Credits to Kees van Voorthuizen and Lieuwe Rooijakkers.')
-	console.log cent('Licensed under the GPLv3 license.').bold
-	console.log repeat('-') + '\n'
-
-	for key in _(commands).keys().sort().value()
-		command = commands[key]
-		console.log key.bold + ": #{command.description}"
-
-		for param in (command.params ? [])
-
-			console.log ''
-			console.log '    ' + param.name.underline + " [#{param.type}]: #{param.description}" +
-				if not param.optional? or param.optional is no then ""
-				else if param.optional is yes then " (optional)".cyan
-				else " (default: #{param.optional})".cyan
-			if param.example? then console.log '    Example'.bold + ": #{param.example}"
-
-		console.log repeat '-'
-
-	if exit
-		process.exit 0
-	else
-		rl.prompt()
+cent = (s, xAxis = process.stdout.columns) ->
+	repeat(' ', (xAxis / 2) - s.length / 2) + s + repeat(' ', (xAxis / 2) - s.length / 2)
 
 parseArgs = (m, l, isPrompt = true) ->
 	splitted = l.trim().split ' '
@@ -653,9 +625,32 @@ parseArgs = (m, l, isPrompt = true) ->
 
 					if isPrompt then rl.prompt()
 
-		when 'exit' then rl.close()
+		when 'help'
+			console.log '\n' + repeat('-')
+			console.log cent('MagisterCLI').bold.cyan
+			console.log cent('A Magister command-line interface written in CoffeeScript.').bold
+			console.log cent('Credits to Kees van Voorthuizen and Lieuwe Rooijakkers.')
+			console.log cent('Licensed under the GPLv3 license.').bold
+			console.log repeat('-') + '\n'
 
-		when 'help' then showHelp()
+			for key in _(commands).keys().sort().value()
+				command = commands[key]
+				console.log key.bold + ": #{command.description}"
+
+				for param in (command.params ? [])
+
+					console.log ''
+					console.log '    ' + param.name.underline + " [#{param.type}]: #{param.description}" +
+						if not param.optional? or param.optional is no then ""
+						else if param.optional is yes then " (optional)".cyan
+						else " (default: #{param.optional})".cyan
+					if param.example? then console.log '    Example'.bold + ": #{param.example}"
+
+				console.log repeat '-'
+			
+			if isPrompt then rl.prompt()
+
+		when 'exit' then rl.close()
 
 		when '' then rl.prompt()
 
@@ -668,9 +663,6 @@ storage.initSync
 
 unless fs.existsSync attachmentsDir
 	fs.mkdirSync attachmentsDir
-
-# if _.last(process.argv).toLowerCase() in [ '--help', '-h' ]
-# 	showHelp yes
 
 main = (val, magister) ->
 	magister ?= new Magister
